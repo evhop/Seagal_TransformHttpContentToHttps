@@ -5,7 +5,6 @@ namespace Seagal_TransformHttpContentToHttps.WPClient.Model
 {
     public interface IUserRepository
     {
-        IEnumerable<User> GetUsers();
         IEnumerable<User> GetUsers( IConnection connection );
         void UpdateUsers( IEnumerable<User> users );
         void UpdateUsers( IConnection connection, IEnumerable<User> users);

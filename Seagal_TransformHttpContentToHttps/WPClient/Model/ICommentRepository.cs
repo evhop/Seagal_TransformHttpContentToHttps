@@ -7,6 +7,6 @@ namespace Seagal_TransformHttpContentToHttps.WPClient.Model
 	{
         void UpdateComments(IEnumerable<Comment> comments);
         void UpdateComments(IConnection connection, IEnumerable<Comment> comments);
-        IEnumerable<Comment> GetComments();
+        IEnumerable<Comment> GetComments(IConnection connection);
     }
 }

@@ -18,7 +18,7 @@ namespace Seagal_TransformHttpContentToHttps.WPClient
         private SSHTunnel _sshTunnel;
         private string _connectionString = null;
         private List<string> _dbTableSchema;
-
+        private string httpSearch = "src=\"http://";
         #endregion
 
         #region Properties
@@ -202,7 +202,7 @@ namespace Seagal_TransformHttpContentToHttps.WPClient
             foreach (var postsTable in PostsTable)
             {
                 var sql = new StringBuilder();
-                sql.Append($"SELECT ID, post_content, post_excerpt, post_content_filtered FROM {postsTable} where (post_content like '%src=\"http://%' or post_excerpt like '%src=\"http://%' or post_content_filtered like '%src=\"http://%');");
+                sql.Append($"SELECT ID, post_content, post_excerpt, post_content_filtered FROM {postsTable} where (post_content like '%{httpSearch}%' or post_excerpt like '%{httpSearch}%' or post_content_filtered like '%{httpSearch}%');");
 
                 var command = new MySqlCommand(sql.ToString(), connection.GetMySqlConnection());
                 using (var reader = command.ExecuteReader())
@@ -264,7 +264,7 @@ namespace Seagal_TransformHttpContentToHttps.WPClient
             var metas = new List<Meta>();
             foreach (var postMetaTable in PostsTable)
             {
-                sql.AppendLine($"SELECT meta_id, meta_value FROM {postMetaTable} WHERE meta_value like '%http://%';");
+                sql.AppendLine($"SELECT meta_id, meta_value FROM {postMetaTable} WHERE meta_value like '%{httpSearch}%';");
 
                 var command = new MySqlCommand(@sql.ToString(), connection.GetMySqlConnection())
                 {
@@ -293,20 +293,12 @@ namespace Seagal_TransformHttpContentToHttps.WPClient
 
         #region ICommentRepository
 
-        public IEnumerable<Comment> GetComments()
-        {
-            using (var connection = CreateConnection())
-            {
-                return GetComments(connection);
-            }
-        }
-
         public IEnumerable<Comment> GetComments(IConnection connection)
         {
             var comments = new List<Comment>();
             foreach (var commentsTable in CommentsTable)
             {
-                var sql = $"SELECT comment_ID, comment_author_url, comment_content FROM {commentsTable} where (comment_author_url like '%http://%' or comment_content like '%http://%'); ";
+                var sql = $"SELECT comment_ID, comment_author_url, comment_content FROM {commentsTable} where (comment_author_url like '%{httpSearch}%' or comment_content like '%{httpSearch}%'); ";
                 var command = new MySqlCommand(sql, connection.GetMySqlConnection());
                 using (var reader = command.ExecuteReader())
                 {
@@ -422,7 +414,7 @@ namespace Seagal_TransformHttpContentToHttps.WPClient
             foreach (var commentMetaTable in CommentMetaTable)
             {
                 var sql = new StringBuilder();
-                sql.AppendLine($"SELECT meta_id, meta_value FROM {commentMetaTable} WHERE meta_value like '%http://%';");
+                sql.AppendLine($"SELECT meta_id, meta_value FROM {commentMetaTable} WHERE meta_value like '%{httpSearch}%';");
 
                 var command = new MySqlCommand(@sql.ToString(), connection.GetMySqlConnection())
                 {
@@ -452,20 +444,12 @@ namespace Seagal_TransformHttpContentToHttps.WPClient
 
         #region IUserRepository
 
-        public IEnumerable<User> GetUsers()
-        {
-            using( var connection = CreateConnection() )
-            {
-                return GetUsers( connection );
-            }
-        }
-
         public IEnumerable<User> GetUsers( IConnection connection )
         {
             var users = new List<User>();
             foreach ( var usersTable in UsersTable)
             {
-                var sql = $"SELECT u.ID, u.user_url FROM {usersTable} AS u where u.user_url like '%http://%';";
+                var sql = $"SELECT u.ID, u.user_url FROM {usersTable} AS u where u.user_url like '%{httpSearch}%';";
 
                 var command = new MySqlCommand(sql, connection.GetMySqlConnection())
                 {
@@ -584,7 +568,7 @@ namespace Seagal_TransformHttpContentToHttps.WPClient
             foreach (var userMetaTable in UserMetaTable)
             {
                 var sql = new StringBuilder();
-                sql.AppendLine($"SELECT umeta_id, meta_value FROM {userMetaTable} WHERE meta_value like '%http://%';");
+                sql.AppendLine($"SELECT umeta_id, meta_value FROM {userMetaTable} WHERE meta_value like '%{httpSearch}%';");
 
                 var command = new MySqlCommand(@sql.ToString(), connection.GetMySqlConnection())
                 {

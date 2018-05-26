@@ -7,11 +7,10 @@ namespace Seagal_TransformHttpContentToHttps.Core
 {
     public class MetaUrlRewriter
     {
-        private ISite _site;
+        private static Regex UrlHttpRegex = new Regex($"src=[\"'](.+?)[\"'].+?", RegexOptions.Compiled);
 
-        public MetaUrlRewriter(ISite site)
+        public MetaUrlRewriter()
         {
-            _site = site;
         }
 
         public object RewriteUrl(object obj)
@@ -24,7 +23,7 @@ namespace Seagal_TransformHttpContentToHttps.Core
             if (obj == null) return obj;
             if (obj is string)
             {
-                obj = ReplaceUrls((string)obj, _site);
+                obj = ReplaceUrls((string)obj);
                 return obj;
             }
             if (obj is bool) return obj;
@@ -53,12 +52,11 @@ namespace Seagal_TransformHttpContentToHttps.Core
             return obj;
         }
     
-        private string ReplaceUrls(string text, ISite site)
+        private string ReplaceUrls(string text)
         {
-            var urlHttpRegex = site.HttpRegex;
             if (!String.IsNullOrEmpty(text))
             {
-                var replacedText = urlHttpRegex.Replace(text, match => RewriteSource(match));
+                var replacedText = UrlHttpRegex.Replace(text, match => RewriteSource(match));
                 if (!string.Equals(text, replacedText))
                 {
                     text = replacedText;

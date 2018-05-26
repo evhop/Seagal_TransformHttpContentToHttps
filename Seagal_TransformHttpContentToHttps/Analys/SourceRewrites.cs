@@ -9,7 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Seagal_TransformHttpContentToHttps.Core;
 using Seagal_TransformHttpContentToHttps.Model;
-using Seagal_TransformHttpContentToHttps.WPClient;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -18,7 +17,6 @@ namespace Seagal_TransformHttpContentToHttps.Analys
     public class SourceRewrites : ISourceRewrites
     {
         public string Name => "img-src";
-        private static Regex ImageRegex = new Regex(@"<img>*", RegexOptions.Compiled);
         private static Regex UrlHttpRegex = new Regex($"src=[\"'](.+?)[\"'].+?", RegexOptions.Compiled);
 
         private List<HttpLink> _imageAnalysList = new List<HttpLink>();
@@ -61,25 +59,19 @@ namespace Seagal_TransformHttpContentToHttps.Analys
                 }
             }
             //Skriv ut filen
-            var distinctList = _imageAnalysList.Distinct().ToList();
             using (var failStream = File.AppendText(pathFail))
             {
                 using (var successStream = File.AppendText(pathSuccess))
                 {
-                    foreach (var x in distinctList)
+                    foreach (var x in _imageAnalysList)
                     {
-                        var logText = $"{x.SchemaTable}\t{x.Id}\t{x.HttpSource}";
-                        if (x.Succeded == null)
-                        {
-                            //Hoppa över
-                        }
-                        else if (x.Succeded == true)
+                        var logText = $"{x.SchemaTable}\t{x.Id}\t{x.HttpSource}\t{x.Succeded}";
+                        if (x.Succeded == true)
                         {
                             successStream.WriteLine(logText);
                         }
                         else
                         {
-                            //Logger.LogInformation(TransformLog(logText));
                             failStream.WriteLine(logText);
                         }
                     }
@@ -91,24 +83,25 @@ namespace Seagal_TransformHttpContentToHttps.Analys
         {
             using (var transaction = connection.BeginTransaction())
             {
+                IEnumerable<Post> posts;
+                IEnumerable<Meta> postMetas;
+                IEnumerable<Comment> comments;
+                IEnumerable<Meta> commentMetas;
+                IEnumerable<User> users;
+                IEnumerable<Meta> userMetas;
+
                 try
                 {
-                    //Hämta länkar för Post
-                    var posts = client.GetPosts(connection);
+                    //Hämta länkar
+                    posts = client.GetPosts(connection);
+                    postMetas = client.GetPostMeta(connection);
+                    comments = client.GetComments(connection);
+                    commentMetas = client.GetCommentMeta(connection);
+                    users = client.GetUsers(connection);
+                    userMetas = client.GetUserMeta(connection);
+
                     //Avsluta transactionen
                     transaction.Commit();
-                    if (posts.Any())
-                    {
-                        GetHttpForPost(posts);
-                    }
-
-                    //TODO Hämta länkar för Postmeta, commentmeta, comments, users, usermeta
-                    //var metas = client.GetPostMeta(connection);
-                    //if (metas.Any())
-                    //{
-                    //    GetHttpForPostmeta(metas, site);
-                    //}
-
                 }
                 catch (Exception e)
                 {
@@ -116,6 +109,48 @@ namespace Seagal_TransformHttpContentToHttps.Analys
                     transaction.Rollback();
                     throw;
                 }
+
+                if (posts.Any())
+                {
+                    GetHttpForPost(posts);
+                }
+                if (postMetas.Any())
+                {
+                    GetHttpForMeta(postMetas);
+                }
+                if (comments.Any())
+                {
+                    GetHttpForComment(comments);
+                }
+                if (commentMetas.Any())
+                {
+                    GetHttpForMeta(commentMetas);
+                }
+                if (users.Any())
+                {
+                    GetHttpForUser(users);
+                }
+                if (userMetas.Any())
+                {
+                    GetHttpForMeta(userMetas);
+                }
+            }
+        }
+
+        private void GetHttpForUser(IEnumerable<User> users)
+        {
+            foreach (var user in users)
+            {
+                GetLinkAsync(user.Id, user.SchemaTable, user.Url).Wait();
+            }
+        }
+
+        private void GetHttpForComment(IEnumerable<Comment> comments)
+        {
+            foreach (var comment in comments)
+            {
+                GetLinkAsync(comment.Id, comment.SchemaTable, comment.AuthorUrl).Wait();
+                GetLinkAsync(comment.Id, comment.SchemaTable, comment.Content).Wait();
             }
         }
 
@@ -133,6 +168,11 @@ namespace Seagal_TransformHttpContentToHttps.Analys
         private async Task GetLinkAsync(ulong id, string schemaTable, string content)
         {
             var matches = UrlHttpRegex.Matches(content).ToList();
+
+            if (!matches.Any())
+            {
+                return;
+            }
 
             // Create a query.   
             IEnumerable<Task<HttpLink>> downloadTasksQuery =
@@ -187,9 +227,9 @@ namespace Seagal_TransformHttpContentToHttps.Analys
             return httpLink;
         }
 
-        private void GetHttpForPostmeta(IEnumerable<Meta> postMetas, ISite site)
+        private void GetHttpForMeta(IEnumerable<Meta> postMetas)
         {
-            MetaUrlRewriter metaUrlRewriter = new MetaUrlRewriter(site);
+            MetaUrlRewriter metaUrlRewriter = new MetaUrlRewriter();
             foreach (var postMeta in postMetas)
             {
                 var data = _serializer.Deserialize(postMeta.MetaValue);
